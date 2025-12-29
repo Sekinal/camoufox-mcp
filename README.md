@@ -13,8 +13,67 @@ An MCP (Model Context Protocol) server for [Camoufox](https://camoufox.com/) - t
 - **Screenshots**: Capture full page or specific elements
 - **Cookie/Storage**: Manage cookies and localStorage
 - **Human-like Behavior**: Optional cursor humanization
+- **Docker Support**: Full containerized deployment with optional VNC debugging
 
-## Installation
+---
+
+## Quick Start (Docker - Recommended)
+
+### Option 1: Docker Compose (Easiest)
+
+```bash
+# Clone the repo
+git clone <repo-url>
+cd camoufox-mcp
+
+# Start the server
+docker compose up -d camoufox
+
+# Or with VNC debugging (view browser at http://localhost:6080)
+docker compose --profile debug up -d
+```
+
+### Option 2: Docker Run
+
+```bash
+# Build the image
+docker build -t camoufox-mcp .
+
+# Run for MCP
+docker run -i --rm camoufox-mcp
+```
+
+### Claude Code Configuration (Docker)
+
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "camoufox": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "camoufox-mcp"]
+    }
+  }
+}
+```
+
+Or with Docker Compose:
+
+```json
+{
+  "mcpServers": {
+    "camoufox": {
+      "command": "docker",
+      "args": ["compose", "-f", "/path/to/camoufox-mcp/docker-compose.yml", "run", "--rm", "-T", "camoufox"]
+    }
+  }
+}
+```
+
+---
+
+## Installation (Local Development)
 
 ```bash
 # Clone and enter directory
@@ -30,9 +89,9 @@ uv run python -c "from camoufox.sync_api import Camoufox; print('OK')"
 uv run playwright install firefox
 ```
 
-## Configuration
+### Claude Code Configuration (Local)
 
-Add to your Claude Code settings (`~/.claude/settings.json` or `.claude/settings.json`):
+Add to `~/.claude/settings.json`:
 
 ```json
 {
@@ -46,6 +105,48 @@ Add to your Claude Code settings (`~/.claude/settings.json` or `.claude/settings
 ```
 
 Then restart Claude Code.
+
+---
+
+## Docker Compose Profiles
+
+| Profile | Command | Description |
+|---------|---------|-------------|
+| Default | `docker compose up camoufox` | MCP server only |
+| Debug | `docker compose --profile debug up` | MCP + noVNC web viewer |
+| Test | `docker compose --profile test up` | Run test suite |
+
+### VNC Debugging
+
+When using the `debug` profile, you can view the browser live:
+
+1. Start with debug profile: `docker compose --profile debug up`
+2. Open http://localhost:6080 in your browser
+3. Watch Claude control the browser in real-time!
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and customize:
+
+```bash
+# Enable VNC server (for debugging)
+ENABLE_VNC=true
+
+# VNC port (default: 5900)
+VNC_PORT=5900
+
+# noVNC web viewer port (default: 6080)
+NOVNC_PORT=6080
+```
+
+### Volumes
+
+The Docker setup persists:
+- `./data/screenshots/` - Saved screenshots
+- `./data/downloads/` - Downloaded files
+- `camoufox-cache` - Browser cache (for faster startups)
+
+---
 
 ## Available Tools (49 total)
 
@@ -138,6 +239,8 @@ Then restart Claude Code.
 | `handle_dialog` | Set up dialog (alert/confirm/prompt) handler |
 | `get_console_logs` | Capture console logs |
 
+---
+
 ## Usage Examples
 
 ### Basic Web Scraping
@@ -172,18 +275,21 @@ User: Take a screenshot and inspect the submit button element
 Claude: [Uses screenshot, inspect_element]
 ```
 
+---
+
 ## Running Tests
 
+### Local
 ```bash
-# Run all tests
-uv run pytest test_server.py -v
-
-# Run specific test class
-uv run pytest test_server.py::TestNavigation -v
-
-# Run with short traceback
 uv run pytest test_server.py -v --tb=short
 ```
+
+### Docker
+```bash
+docker compose --profile test run --rm test
+```
+
+---
 
 ## Development
 
@@ -193,15 +299,57 @@ uv run python main.py
 
 # Check available tools
 uv run python -c "from main import mcp; print([t.name for t in mcp._tool_manager._tools.values()])"
+
+# Build Docker image
+docker build -t camoufox-mcp .
+
+# Run with VNC for debugging
+ENABLE_VNC=true docker compose --profile debug up
 ```
+
+---
 
 ## Architecture
 
-- `main.py` - MCP server with all 49 tools
-- `test_server.py` - Comprehensive test suite
-- Uses [FastMCP](https://github.com/modelcontextprotocol/python-sdk) for MCP protocol
-- Uses [Camoufox](https://github.com/daijro/camoufox) for anti-detect browser
-- Uses [Playwright](https://playwright.dev/) for browser automation
+```
+camoufox-mcp/
+├── main.py              # MCP server with 49 tools
+├── test_server.py       # Comprehensive test suite (16 tests)
+├── Dockerfile           # Multi-stage Docker build
+├── docker-compose.yml   # Compose config with profiles
+├── docker-entrypoint.sh # Xvfb + VNC startup script
+├── pyproject.toml       # Python dependencies
+└── README.md            # This file
+```
+
+### Technologies
+- [FastMCP](https://github.com/modelcontextprotocol/python-sdk) - MCP protocol implementation
+- [Camoufox](https://github.com/daijro/camoufox) - Anti-detect Firefox browser
+- [Playwright](https://playwright.dev/) - Browser automation
+- [Docker](https://www.docker.com/) - Containerization
+- [noVNC](https://novnc.com/) - Web-based VNC viewer
+
+---
+
+## Troubleshooting
+
+### Browser not launching in Docker
+Ensure Xvfb is running. Check logs:
+```bash
+docker compose logs camoufox
+```
+
+### VNC not connecting
+1. Ensure `ENABLE_VNC=true` is set
+2. Check port 5900 is not in use
+3. For noVNC, check port 6080
+
+### MCP connection issues
+1. Verify Docker is running
+2. Check the command in Claude settings uses `-i` flag
+3. Try running manually: `docker run -i --rm camoufox-mcp`
+
+---
 
 ## License
 
@@ -212,3 +360,4 @@ MIT
 - [Camoufox](https://github.com/daijro/camoufox) - Anti-detect Firefox browser
 - [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) - Model Context Protocol
 - [Playwright](https://playwright.dev/) - Browser automation
+- [noVNC](https://novnc.com/) - HTML5 VNC client

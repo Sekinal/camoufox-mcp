@@ -1,0 +1,91 @@
+# Camoufox MCP Server - Docker Compose Configuration
+#
+# Usage:
+#   Development with VNC:  docker compose --profile debug up
+#   Production (MCP only): docker compose up -d camoufox
+#
+# Profiles:
+#   - default: Just the MCP server
+#   - debug:   MCP server + noVNC web viewer (see browser at http://localhost:6080)
+
+services:
+  # ==========================================================================
+  # Main Camoufox MCP Server
+  # ==========================================================================
+  camoufox:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: camoufox-mcp
+    stdin_open: true      # Required for MCP stdio transport
+    tty: true
+    environment:
+      - DISPLAY=:99
+      - ENABLE_VNC=${ENABLE_VNC:-false}
+    volumes:
+      # Persist screenshots and downloads
+      - ./data/screenshots:/app/screenshots
+      - ./data/downloads:/app/downloads
+      # Optional: persist browser cache for faster startups
+      - camoufox-cache:/home/camoufox/.cache
+    networks:
+      - camoufox-net
+    # Expose VNC port when debugging
+    ports:
+      - "${VNC_PORT:-5900}:5900"
+    restart: unless-stopped
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  # ==========================================================================
+  # noVNC Web Viewer (Debug Profile)
+  # Access browser visually at http://localhost:6080
+  # ==========================================================================
+  novnc:
+    image: theasp/novnc:latest
+    container_name: camoufox-novnc
+    profiles:
+      - debug
+    environment:
+      - DISPLAY_WIDTH=1920
+      - DISPLAY_HEIGHT=1080
+      - RUN_XTERM=no
+      - VNC_HOST=camoufox
+      - VNC_PORT=5900
+    ports:
+      - "${NOVNC_PORT:-6080}:8080"
+    networks:
+      - camoufox-net
+    depends_on:
+      - camoufox
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Optional: Standalone test runner
+  # ==========================================================================
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles:
+      - test
+    environment:
+      - DISPLAY=:99
+    volumes:
+      - ./test_server.py:/app/test_server.py:ro
+    command: ["python", "-m", "pytest", "test_server.py", "-v", "--tb=short"]
+    networks:
+      - camoufox-net
+
+networks:
+  camoufox-net:
+    driver: bridge
+
+volumes:
+  camoufox-cache:
+    driver: local
