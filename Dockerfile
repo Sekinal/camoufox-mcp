@@ -78,6 +78,7 @@ COPY --from=builder /app/.venv /app/.venv
 # Copy application code
 COPY main.py ./
 COPY pyproject.toml uv.lock ./
+COPY src/ ./src/
 
 # Install the project
 RUN uv sync --frozen --no-dev
