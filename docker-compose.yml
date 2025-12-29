@@ -1,12 +1,15 @@
 # Camoufox MCP Server - Docker Compose Configuration
+# Version: 0.2.0
 #
 # Usage:
 #   Development with VNC:  docker compose --profile debug up
 #   Production (MCP only): docker compose up -d camoufox
+#   Run tests:             docker compose --profile test run --rm test
 #
 # Profiles:
 #   - default: Just the MCP server
 #   - debug:   MCP server + noVNC web viewer (see browser at http://localhost:6080)
+#   - test:    Run test suite
 
 services:
   # ==========================================================================
@@ -16,31 +19,76 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: camoufox-mcp:0.2.0
     container_name: camoufox-mcp
     stdin_open: true      # Required for MCP stdio transport
     tty: true
+
+    # Environment configuration
     environment:
       - DISPLAY=:99
       - ENABLE_VNC=${ENABLE_VNC:-false}
+      # Logging configuration
+      - CAMOUFOX_LOG_LEVEL=${CAMOUFOX_LOG_LEVEL:-INFO}
+      - CAMOUFOX_LOG_FORMAT=${CAMOUFOX_LOG_FORMAT:-json}
+      # Browser defaults
+      - CAMOUFOX_HEADLESS=${CAMOUFOX_HEADLESS:-true}
+      - CAMOUFOX_HUMANIZE=${CAMOUFOX_HUMANIZE:-true}
+      # Timeout configuration (ms)
+      - CAMOUFOX_TIMEOUT_NAVIGATION=${CAMOUFOX_TIMEOUT_NAVIGATION:-30000}
+      - CAMOUFOX_TIMEOUT_SELECTOR=${CAMOUFOX_TIMEOUT_SELECTOR:-30000}
+      # Network capture
+      - CAMOUFOX_NETWORK_CAPTURE=${CAMOUFOX_NETWORK_CAPTURE:-true}
+
+    # Volume mounts
     volumes:
       # Persist screenshots and downloads
       - ./data/screenshots:/app/screenshots
       - ./data/downloads:/app/downloads
-      # Optional: persist browser cache for faster startups
+      # Persist browser cache for faster startups
       - camoufox-cache:/home/camoufox/.cache
+
+    # Networking
     networks:
       - camoufox-net
-    # Expose VNC port when debugging
     ports:
       - "${VNC_PORT:-5900}:5900"
+
+    # Production settings
     restart: unless-stopped
-    # Resource limits (adjust as needed)
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource limits
     deploy:
       resources:
         limits:
           memory: 2G
+          cpus: '2'
         reservations:
           memory: 512M
+          cpus: '0.5'
+
+    # Logging configuration for log aggregation
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service,environment"
+    labels:
+      - "service=camoufox-mcp"
+      - "environment=${ENVIRONMENT:-production}"
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "Xvfb"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # ==========================================================================
   # noVNC Web Viewer (Debug Profile)
@@ -62,11 +110,17 @@ services:
     networks:
       - camoufox-net
     depends_on:
-      - camoufox
+      camoufox:
+        condition: service_healthy
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
 
   # ==========================================================================
-  # Optional: Standalone test runner
+  # Test Runner
   # ==========================================================================
   test:
     build:
@@ -76,11 +130,18 @@ services:
       - test
     environment:
       - DISPLAY=:99
+      - CAMOUFOX_LOG_LEVEL=WARNING
+      - CAMOUFOX_LOG_FORMAT=console
     volumes:
+      - ./tests:/app/tests:ro
       - ./test_server.py:/app/test_server.py:ro
-    command: ["python", "-m", "pytest", "test_server.py", "-v", "--tb=short"]
+    command: ["python", "-m", "pytest", "-v", "--tb=short"]
     networks:
       - camoufox-net
+    deploy:
+      resources:
+        limits:
+          memory: 2G
 
 networks:
   camoufox-net:
