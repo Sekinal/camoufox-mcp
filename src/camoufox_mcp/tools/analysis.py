@@ -1160,3 +1160,80 @@ def register(mcp: FastMCP) -> None:
 
         except Exception as e:
             return f"Error computing diff: {str(e)}"
+
+    @mcp.tool()
+    @instrumented_tool()
+    async def inject_init_script(script: str, name: str = "custom") -> str:
+        """
+        Inject JavaScript that runs BEFORE any page scripts load.
+
+        Use this to hook browser APIs before anti-bot scripts can detect them.
+        Scripts persist across navigations until browser is closed.
+
+        Example hooks:
+        - Override navigator.webdriver to return undefined
+        - Hook canvas.toDataURL to return fake fingerprints
+        - Intercept fetch/XMLHttpRequest to log API calls
+        - Mock window.Notification or other APIs
+
+        Args:
+            script: JavaScript code to inject (runs in page context)
+            name: Identifier for this script (for tracking)
+
+        Returns:
+            Confirmation message
+        """
+        session = get_session()
+
+        if not session.page:
+            return "Error: No active page. Launch browser first."
+
+        if not script.strip():
+            return "Error: Script cannot be empty."
+
+        try:
+            # Track injected scripts on session
+            if not hasattr(session, "_init_scripts"):
+                session._init_scripts = []
+
+            # Add the init script - runs before page load on all future navigations
+            await session.page.context.add_init_script(script)
+
+            session._init_scripts.append({
+                "name": name,
+                "length": len(script),
+                "preview": script[:100] + "..." if len(script) > 100 else script
+            })
+
+            return json.dumps({
+                "success": True,
+                "message": f"Init script '{name}' injected. Will run before page scripts on next navigation.",
+                "scripts_active": len(session._init_scripts),
+                "note": "Navigate to a page to see the script execute."
+            }, indent=2)
+
+        except Exception as e:
+            return f"Error injecting script: {str(e)}"
+
+    @mcp.tool()
+    @instrumented_tool()
+    async def list_init_scripts() -> str:
+        """
+        List all init scripts currently injected.
+
+        Returns:
+            JSON array of injected scripts with names and previews
+        """
+        session = get_session()
+
+        if not hasattr(session, "_init_scripts") or not session._init_scripts:
+            return json.dumps({
+                "scripts": [],
+                "message": "No init scripts injected yet."
+            }, indent=2)
+
+        return json.dumps({
+            "scripts": session._init_scripts,
+            "total": len(session._init_scripts),
+            "note": "Scripts run in order of injection before each page load."
+        }, indent=2)
