@@ -87,10 +87,13 @@ RUN uv sync --frozen --no-dev
 RUN mkdir -p /app/screenshots /app/downloads && \
     chown -R camoufox:camoufox /app
 
-# Download Camoufox browser and Playwright browsers
-RUN /app/.venv/bin/python -c "from camoufox.sync_api import Camoufox; print('Camoufox OK')" && \
+# Download Camoufox browser (713MB) and Playwright Firefox
+RUN /app/.venv/bin/python -m camoufox fetch && \
     /app/.venv/bin/playwright install firefox && \
-    chown -R camoufox:camoufox /root/.cache 2>/dev/null || true
+    chmod -R 755 /root/.cache && \
+    mkdir -p /home/camoufox/.cache && \
+    cp -r /root/.cache/* /home/camoufox/.cache/ && \
+    chown -R camoufox:camoufox /home/camoufox/.cache
 
 # Environment variables
 ENV DISPLAY=:99
