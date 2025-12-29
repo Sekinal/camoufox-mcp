@@ -137,6 +137,10 @@ VNC_PORT=5900
 
 # noVNC web viewer port (default: 6080)
 NOVNC_PORT=6080
+
+# Screenshot settings
+CAMOUFOX_SCREENSHOT_DIR=/tmp/camoufox_screenshots  # Directory for auto-saved screenshots
+CAMOUFOX_SCREENSHOT_AUTO_SAVE=true                  # Always save to file (no base64)
 ```
 
 ### Volumes
@@ -205,7 +209,7 @@ The Docker setup persists:
 ### Screenshots & Viewport
 | Tool | Description |
 |------|-------------|
-| `screenshot` | Take screenshot (full page, element, or viewport) |
+| `screenshot` | Take screenshot (saves to file, returns path - no base64 to save context) |
 | `get_viewport_size` | Get current viewport dimensions |
 | `set_viewport_size` | Set viewport dimensions |
 

@@ -46,6 +46,14 @@ class LogConfig:
 
 
 @dataclass
+class ScreenshotConfig:
+    """Screenshot settings."""
+
+    default_dir: str = "/tmp/camoufox_screenshots"
+    auto_save: bool = True  # Always save to file instead of returning base64
+
+
+@dataclass
 class BrowserConfig:
     """Browser launch defaults."""
 
@@ -65,6 +73,7 @@ class ServerConfig:
     network: NetworkConfig = field(default_factory=NetworkConfig)
     logging: LogConfig = field(default_factory=LogConfig)
     browser: BrowserConfig = field(default_factory=BrowserConfig)
+    screenshot: ScreenshotConfig = field(default_factory=ScreenshotConfig)
 
     @classmethod
     def from_env(cls) -> ServerConfig:
@@ -100,6 +109,10 @@ class ServerConfig:
                 default_viewport_height=int(os.getenv("CAMOUFOX_VIEWPORT_HEIGHT", "1080")),
                 auto_recover=os.getenv("CAMOUFOX_AUTO_RECOVER", "true").lower() == "true",
                 max_pages=int(os.getenv("CAMOUFOX_MAX_PAGES", "10")),
+            ),
+            screenshot=ScreenshotConfig(
+                default_dir=os.getenv("CAMOUFOX_SCREENSHOT_DIR", "/tmp/camoufox_screenshots"),
+                auto_save=os.getenv("CAMOUFOX_SCREENSHOT_AUTO_SAVE", "true").lower() == "true",
             ),
         )
 

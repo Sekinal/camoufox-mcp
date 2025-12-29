@@ -6,8 +6,9 @@ Tools: screenshot, get_viewport_size, set_viewport_size
 
 from __future__ import annotations
 
-import base64
 import json
+import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,7 +25,7 @@ def register(mcp: FastMCP) -> None:
     """Register screenshot and viewport tools with the MCP server."""
 
     @mcp.tool()
-    @instrumented_tool(log_outputs=False)  # Base64 is huge
+    @instrumented_tool(log_outputs=False)  # Path can be long
     async def screenshot(
         path: str | None = None,
         full_page: bool = False,
@@ -36,14 +37,14 @@ def register(mcp: FastMCP) -> None:
         Take a screenshot of the page or an element.
 
         Args:
-            path: File path to save screenshot (if None, returns base64)
+            path: File path to save screenshot (if None, saves to default directory)
             full_page: Capture the full scrollable page
             selector: CSS selector to screenshot specific element
             quality: JPEG quality 0-100 (only for JPEG format)
             timeout: Action timeout in milliseconds
 
         Returns:
-            Path to saved file or base64-encoded image
+            Path to saved file
         """
         session = get_session()
 
@@ -58,16 +59,23 @@ def register(mcp: FastMCP) -> None:
         config = get_config()
         action_timeout = timeout or config.timeouts.screenshot
 
+        # Generate default path if not provided
+        if not path:
+            screenshot_dir = Path(config.screenshot.default_dir)
+            screenshot_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            unique_id = uuid.uuid4().hex[:8]
+            path = str(screenshot_dir / f"screenshot_{timestamp}_{unique_id}.png")
+
         try:
             screenshot_kwargs = {}
 
             # Determine format from path extension
-            if path:
-                path_obj = Path(path)
-                if path_obj.suffix.lower() in (".jpg", ".jpeg"):
-                    screenshot_kwargs["type"] = "jpeg"
-                    if quality:
-                        screenshot_kwargs["quality"] = max(0, min(100, quality))
+            path_obj = Path(path)
+            if path_obj.suffix.lower() in (".jpg", ".jpeg"):
+                screenshot_kwargs["type"] = "jpeg"
+                if quality:
+                    screenshot_kwargs["quality"] = max(0, min(100, quality))
 
             if selector:
                 screenshot_bytes = await session.page.locator(selector).screenshot(
@@ -78,15 +86,10 @@ def register(mcp: FastMCP) -> None:
                     full_page=full_page, timeout=action_timeout, **screenshot_kwargs
                 )
 
-            if path:
-                path_obj = Path(path)
-                path_obj.parent.mkdir(parents=True, exist_ok=True)
-                with open(path, "wb") as f:
-                    f.write(screenshot_bytes)
-                return f"Screenshot saved to: {path}"
-            else:
-                b64 = base64.b64encode(screenshot_bytes).decode()
-                return f"data:image/png;base64,{b64}"
+            path_obj.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "wb") as f:
+                f.write(screenshot_bytes)
+            return f"Screenshot saved to: {path}"
 
         except Exception as e:
             return f"Error taking screenshot: {str(e)}"
