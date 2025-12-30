@@ -152,7 +152,7 @@ The Docker setup persists:
 
 ---
 
-## Available Tools (49 total)
+## Available Tools (55 total)
 
 ### Browser Management
 | Tool | Description |
@@ -187,6 +187,16 @@ The Docker setup persists:
 | `hover` | Hover over an element |
 | `scroll` | Scroll page or element into view |
 | `upload_file` | Upload file to file input |
+
+### Compound Actions (Token-Efficient)
+| Tool | Description |
+|------|-------------|
+| `batch_actions` | Execute multiple actions in one call (click, fill, type, press, select, etc.) |
+| `fill_form` | Fill multiple form fields at once with optional submit |
+| `click_text` | Click element by text content (no selector needed) |
+| `click_role` | Click element by ARIA role (button, link, etc.) |
+| `fill_by_label` | Fill input by its label text (no selector needed) |
+| `fill_placeholder` | Fill input by placeholder text (no selector needed) |
 
 ### Content Extraction
 | Tool | Description |
@@ -255,12 +265,14 @@ User: Launch a browser and go to example.com, then get the page title
 Claude: [Uses launch_browser, goto, get_page_title]
 ```
 
-### Form Automation
+### Form Automation (Token-Efficient)
 
 ```
 User: Fill out the login form with username "test" and password "secret", then submit
 
-Claude: [Uses fill for username, fill for password, click on submit button]
+Claude: [Uses fill_form with {"#username": "test", "#password": "secret"} and submit_selector]
+# OR uses fill_by_label for "Username" and "Password" fields
+# OR uses batch_actions with multiple fill + click actions
 ```
 
 ### Network Analysis

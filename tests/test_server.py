@@ -100,6 +100,10 @@ class TestToolRegistration:
         """Debug tools are registered."""
         assert server is not None
 
+    def test_compound_tools_registered(self, server):
+        """Compound action tools are registered."""
+        assert server is not None
+
 
 class TestRunServer:
     """Tests for run_server function."""

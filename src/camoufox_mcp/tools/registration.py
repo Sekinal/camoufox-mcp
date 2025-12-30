@@ -36,6 +36,7 @@ def register_all_tools(mcp: FastMCP) -> None:
     from src.camoufox_mcp.tools import frames
     from src.camoufox_mcp.tools import analysis
     from src.camoufox_mcp.tools import debug
+    from src.camoufox_mcp.tools import compound
 
     # Register browser management tools
     browser.register(mcp)
@@ -85,4 +86,8 @@ def register_all_tools(mcp: FastMCP) -> None:
     debug.register(mcp)
     logger.debug("tools_registered", module="debug")
 
-    logger.info("all_tools_registered", total_modules=12)
+    # Register compound action tools (batch operations, smart selectors)
+    compound.register(mcp)
+    logger.debug("tools_registered", module="compound")
+
+    logger.info("all_tools_registered", total_modules=13)
