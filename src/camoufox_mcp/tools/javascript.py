@@ -47,11 +47,10 @@ def register(mcp: FastMCP) -> None:
         if not valid:
             return f"Error: Invalid JavaScript - {result}"
 
-        config = get_config()
-        eval_timeout = timeout or config.timeouts.js_evaluation
-
+        # Note: page.evaluate() doesn't support timeout parameter
+        # The timeout parameter is kept in the API for consistency but not used here
         try:
-            result = await session.page.evaluate(expression, timeout=eval_timeout)
+            result = await session.page.evaluate(expression)
             return json.dumps(result, indent=2, default=str)
         except Exception as e:
             return f"Error evaluating JS: {str(e)}"
