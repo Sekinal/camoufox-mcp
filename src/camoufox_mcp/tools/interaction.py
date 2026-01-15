@@ -1,7 +1,7 @@
 """
 Page interaction tools for Camoufox MCP Server.
 
-Tools: click, fill, type_text, press_key, select_option, check, uncheck, hover, scroll, upload_file
+Tools: click, fill, type_text, press_key, select_option, check, uncheck, hover, scroll, upload_file, drag_and_drop
 """
 
 from __future__ import annotations
@@ -403,3 +403,57 @@ def register(mcp: FastMCP) -> None:
             return f"Uploaded file to '{selector}'."
         except Exception as e:
             return f"Error uploading file: {str(e)}"
+
+    @mcp.tool()
+    @instrumented_tool()
+    async def drag_and_drop(
+        source_selector: str,
+        target_selector: str,
+        source_position: dict | None = None,
+        target_position: dict | None = None,
+        timeout: int | None = None,
+    ) -> str:
+        """
+        Perform drag and drop between two elements.
+
+        Args:
+            source_selector: CSS selector for the source element to drag
+            target_selector: CSS selector for the target element to drop onto
+            source_position: Optional position within source element {"x": int, "y": int}
+            target_position: Optional position within target element {"x": int, "y": int}
+            timeout: Action timeout in milliseconds
+
+        Returns:
+            Drag and drop result
+        """
+        session = get_session()
+
+        if not session.page:
+            return "Error: No active page."
+
+        valid, result = safe_validate(validate_selector, source_selector)
+        if not valid:
+            return f"Error: Invalid source selector - {result}"
+
+        valid, result = safe_validate(validate_selector, target_selector)
+        if not valid:
+            return f"Error: Invalid target selector - {result}"
+
+        config = get_config()
+        action_timeout = timeout or config.timeouts.element_action
+
+        try:
+            source = session.page.locator(source_selector)
+            target = session.page.locator(target_selector)
+
+            # Build options dict
+            options = {"timeout": action_timeout}
+            if source_position:
+                options["source_position"] = source_position
+            if target_position:
+                options["target_position"] = target_position
+
+            await source.drag_to(target, **options)
+            return f"Dragged '{source_selector}' to '{target_selector}'."
+        except Exception as e:
+            return f"Error during drag and drop: {str(e)}"

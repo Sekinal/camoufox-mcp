@@ -37,6 +37,12 @@ def register_all_tools(mcp: FastMCP) -> None:
     from src.camoufox_mcp.tools import analysis
     from src.camoufox_mcp.tools import debug
     from src.camoufox_mcp.tools import compound
+    # New Playwright MCP-inspired modules
+    from src.camoufox_mcp.tools import accessibility
+    from src.camoufox_mcp.tools import mouse
+    from src.camoufox_mcp.tools import pdf
+    from src.camoufox_mcp.tools import assertions
+    from src.camoufox_mcp.tools import tracing
 
     # Register browser management tools
     browser.register(mcp)
@@ -90,4 +96,24 @@ def register_all_tools(mcp: FastMCP) -> None:
     compound.register(mcp)
     logger.debug("tools_registered", module="compound")
 
-    logger.info("all_tools_registered", total_modules=13)
+    # Register accessibility tools (snapshots for LLM understanding)
+    accessibility.register(mcp)
+    logger.debug("tools_registered", module="accessibility")
+
+    # Register coordinate-based mouse tools (vision-based interactions)
+    mouse.register(mcp)
+    logger.debug("tools_registered", module="mouse")
+
+    # Register PDF generation tools
+    pdf.register(mcp)
+    logger.debug("tools_registered", module="pdf")
+
+    # Register test assertion tools (verification and validation)
+    assertions.register(mcp)
+    logger.debug("tools_registered", module="assertions")
+
+    # Register tracing tools (trace recording for debugging)
+    tracing.register(mcp)
+    logger.debug("tools_registered", module="tracing")
+
+    logger.info("all_tools_registered", total_modules=18)
