@@ -43,6 +43,9 @@ def register_all_tools(mcp: FastMCP) -> None:
     from src.camoufox_mcp.tools import pdf
     from src.camoufox_mcp.tools import assertions
     from src.camoufox_mcp.tools import tracing
+    # Chrome DevTools MCP-inspired modules
+    from src.camoufox_mcp.tools import emulation
+    from src.camoufox_mcp.tools import performance
 
     # Register browser management tools
     browser.register(mcp)
@@ -116,4 +119,12 @@ def register_all_tools(mcp: FastMCP) -> None:
     tracing.register(mcp)
     logger.debug("tools_registered", module="tracing")
 
-    logger.info("all_tools_registered", total_modules=18)
+    # Register device/network emulation tools
+    emulation.register(mcp)
+    logger.debug("tools_registered", module="emulation")
+
+    # Register performance analysis tools
+    performance.register(mcp)
+    logger.debug("tools_registered", module="performance")
+
+    logger.info("all_tools_registered", total_modules=20)
